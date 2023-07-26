@@ -22,16 +22,19 @@ import 'observer_route.dart';
 ///[RouteAware]定义了路由观察者的回调
 ///[StateLiveState] 定义了生命周期函数
 abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
-    with WidgetsBindingObserver, RouteAware,StateLiveState {
-
+    with WidgetsBindingObserver, RouteAware, StateLiveState {
   ///是否将要移除当前的Widget
   bool isDidPop = false;
+
   ///是否执行过 onWillDestory 回调
   bool isStop = false;
+
   ///当前页面是否可见可操作标识
   bool currentMounted = false;
+
   ///当前页面是否有焦点
   bool currentFocus = true;
+
   ///是否输出日志
   bool isBaseLifeLog = false;
 
@@ -44,14 +47,18 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   @override
   void initState() {
     super.initState();
+
     ///生命周期方法回调
     onWillCreat();
+
     ///绑定监听
     WidgetsBinding.instance.addObserver(this);
+
     ///单次 Frame 绘制回调，通过 addPostFrameCallback 实现。
     ///它会在当前 Frame 绘制完成后进行回调，并只会回调一次，如果要再次监听则需要再设置一次。
     WidgetsBinding.instance.addPostFrameCallback(postFrameCallback);
   }
+
   ///lib/app/base/base_life_state.dart
   ///WidgetsBinding的绘制完成的一次性回调
   void postFrameCallback(Duration timeStamp) {
@@ -59,49 +66,53 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
     onCreat();
     onStart();
     onResumed();
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint(" BaseLifeState 生命周期 单次 Frame 绘制回调");
     }
+
     ///记录当前Widget的的状态
     currentMounted = mounted;
+
     ///添加一个焦点监听
     FocusScope.of(context).addListener(focusScopeListener);
+
     ///在第一次绘制完成时再添加实时回调的监听
     addPersistentFrameCallbackFunction();
-
   }
+
   ///lib/app/base/base_life_state.dart
   ///当前 Widget 获取焦点的监听
   ///当前的 Widget 的焦点有变化时都会回调些方法
   void focusScopeListener() {
-    if(context==null){
+    if (context == null) {
       return;
     }
+
     ///判断当前是否有焦点
     /// 当被dialog挡住时，虽然可见，但是不可操作
     bool isFirstFocus = FocusScope.of(context).isFirstFocus;
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint(" BaseLifeState 生命周期 FocusScope $isFirstFocus");
     }
+
     ///上一次的焦点与本次的焦点状态不一样时
     ///进行修改并回调相应的生命周期函数
-    if(currentFocus!=isFirstFocus){
+    if (currentFocus != isFirstFocus) {
       currentFocus = isFirstFocus;
-      if(isFirstFocus){
+      if (isFirstFocus) {
         ///从无焦点 -> 有焦点
         onResumed();
-      }else{
+      } else {
         ///从有焦点到 ->无焦点
         ///isDidPop为true时代表当前的Widget要被移除
-        if(isDidPop){
+        if (isDidPop) {
           onStop();
-        }else{
+        } else {
           onPause();
         }
       }
     }
   }
-
 
   ///lib/app/base/base_life_state.dart
   ///在页面的每帧绘制完成后添加的实时
@@ -109,9 +120,8 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
     ///实时 Frame 绘制回调，则通过 addPersistentFrameCallback 实现。
     ///这个函数会在每次绘制 Frame 结束后进行回调，可以用作 FPS 检测。
     WidgetsBinding.instance.addPersistentFrameCallback((Duration timeStamp) {
-      if(isBaseLifeLog) {
-        debugPrint(
-            " BaseLifeState 生命周期 实时 Frame 绘制回调 "); //  每帧都回调
+      if (isBaseLifeLog) {
+        debugPrint(" BaseLifeState 生命周期 实时 Frame 绘制回调 "); //  每帧都回调
       }
       if (currentMounted != mounted) {
         if (mounted) {
@@ -120,7 +130,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
           onResumed();
         } else {
           ///当前Widget不可见
-          if(!isDidPop){
+          if (!isDidPop) {
             onPause();
             onStop();
           }
@@ -133,14 +143,14 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   @override
   void reassemble() {
     super.reassemble();
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint(' BaseLifeState 生命周期 reassemble');
     }
   }
 
-
   ///lib/app/base/base_life_state.dart
-  ModalRoute _modalRoute;
+  ModalRoute? _modalRoute;
+
   /// 当 StatefulWidget 第一次创建的时候，
   /// didChangeDependencies方法会在 initState方法之后立即调用，
   /// State 对象的依赖关系发生变化后
@@ -150,12 +160,13 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // 订阅 lifeFouteObserver，之后就会尝试调用抽象类 RouteAware 的方法
-    if(_modalRoute==null){
-      _modalRoute =ModalRoute.of(context);
-      lifeFouteObserver.subscribe(this,_modalRoute);
+    if (_modalRoute == null) {
+      _modalRoute = ModalRoute.of(context);
+      lifeFouteObserver.subscribe(this, _modalRoute as PageRoute);
     }
-    if(isDidPop&&!isStop){
-      isStop=true;
+    if (isDidPop && !isStop) {
+      isStop = true;
+
       ///移除焦点监听
       FocusScope.of(context).removeListener(focusScopeListener);
       onPause();
@@ -171,7 +182,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   ///I/flutter (15758): AppLifecycleState.resumed
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint('BaseLifeState 生命周期 $state');
     }
     switch (state) {
@@ -183,6 +194,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
         onResumed();
         break;
       case AppLifecycleState.inactive:
+
         /// App切从显示切后台，回调的第一个方法
         /// 处在不活动状态，无法处理用户响应
         break;
@@ -201,7 +213,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   ///系统窗口改变回调 如键盘弹出 屏幕旋转等
   @override
   void didChangeMetrics() {
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint('BaseLifeState 生命周期 didChangeMetrics');
     }
     super.didChangeMetrics();
@@ -221,7 +233,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
 
   ///语言环境发生改变时回调这里
   @override
-  void didChangeLocales(List<Locale> locale) {
+  void didChangeLocales(List<Locale>? locale) {
     super.didChangeLocales(locale);
   }
 
@@ -234,7 +246,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   @override
   void deactivate() {
     super.deactivate();
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint('BaseLifeState 生命周期 deactivate');
     }
   }
@@ -243,11 +255,12 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   void dispose() {
     ///注销
     WidgetsBinding.instance.removeObserver(this);
+
     ///解除订阅
     lifeFouteObserver.unsubscribe(this);
     onDestory();
     super.dispose();
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint('BaseLifeState 生命周期 dispose');
     }
   }
@@ -255,7 +268,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   @override
   void didPush() {
     // 当前页面入栈
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint("BaseLifeState 生命周期 didPush");
     }
   }
@@ -263,7 +276,7 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   @override
   void didPopNext() {
     // 当前路由的下个路由出栈，且当前页面显示
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint("BaseLifeState 生命周期 didPopNext");
     }
     onStart();
@@ -272,21 +285,19 @@ abstract class BaseLifeState<T extends StatefulWidget> extends State<T>
   @override
   void didPop() {
     super.didPop();
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint("BaseLifeState 生命周期 didPop");
     }
-    isDidPop=true;
+    isDidPop = true;
   }
 
   ///当前页面调用 Navigator的push方法打开新的路由页面的回调
   @override
   void didPushNext() {
     super.didPushNext();
-    if(isBaseLifeLog) {
+    if (isBaseLifeLog) {
       debugPrint("BaseLifeState 生命周期 didPushNext");
     }
     onStop();
   }
-
-
 }
